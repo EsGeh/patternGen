@@ -2,7 +2,7 @@ module Main where
 
 import ParseArgs
 
-import Prelude hiding( Left, Right, Either)
+--import Prelude hiding( Left, Right, Either)
 import System.Environment
 import Network
 
