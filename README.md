@@ -1,0 +1,4 @@
+patternGen
+==========
+
+pattern generator
