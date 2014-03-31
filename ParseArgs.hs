@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+-- {-# LANGUAGE FlexibleInstances #-}
 module ParseArgs where
 
 import ProgramTypes
@@ -9,21 +9,18 @@ parseArgs :: [String] -> Either String Settings
 parseArgs args = do
 	let (options, nonOptions, errors) = getOpt argOrder listOptDescr args
 	case errors of
-		[] -> settingsFromFlags options
+		[] -> Right $ settingsFromFlags options
 		_ -> Left $
 			foldl (++) "" errors
 
-settingsFromFlags :: [Flag] -> Either String Settings
-settingsFromFlags flags = do
-	port_ <- portFromFlags flags
-	return $ Settings {
-		port = port_
+settingsFromFlags :: [Flag] -> Settings
+settingsFromFlags flags = 
+	let eitherPort = portFromFlags flags
+	in Settings {
+		port = case eitherPort of
+			Left _ -> Nothing
+			Right port -> Just port
 	}
-
-{-
-test = case portFromFlags [] of
-	Left error -> 
--}
 
 portFromFlags :: [Flag] -> Either String Int
 portFromFlags options = case options of
@@ -31,7 +28,6 @@ portFromFlags options = case options of
 	(x:xs) -> case x of
 		Port port -> return $ port
 		--_ -> portFromFlags xs
-	
 
 argOrder = RequireOrder
 

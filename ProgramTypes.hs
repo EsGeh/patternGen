@@ -1,10 +1,11 @@
 module ProgramTypes where
 
-
 data Settings = Settings {
-	port :: Int
+	port :: Maybe Port
 }
 	deriving( Show )
+
+type Port = Int
 
 data State = State {
 }
