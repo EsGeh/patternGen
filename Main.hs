@@ -20,12 +20,9 @@ interaction :: IO ()
 interaction = do
 	requests <- liftM lines $ getContents
 
-	let stringAnswers = map stringAnswersFromInput requests
+	let stringAnswers = map (handleError . runIdentity . runErrorT . answerFromInput) requests
 
 	putStrLn $ unlines $ stringAnswers
-
-stringAnswersFromInput ::  String -> String
-stringAnswersFromInput str = handleError $ runIdentity $ runErrorT $ answerFromInput str 
 
 handleError :: Either String String -> String 
 handleError answerOrErr = case answerOrErr of
@@ -36,12 +33,17 @@ answerFromInput :: Monad m => String -> ErrorT String m String
 answerFromInput str =
 	reqFromStr str >>= answerFromReq >>= return . strFromAnswer
 
+
+-- code relevant for the protocol
+
 reqFromStr :: Monad m => String -> ErrorT String m Request
 reqFromStr = parseRequest
+
+strFromAnswer :: Answer -> String
+strFromAnswer answer = "accepted"
+
+-- the real pattern generator...:
 
 answerFromReq :: Monad m => Request -> ErrorT String m Answer
 answerFromReq req = do
 	return Answer
-
-strFromAnswer :: Answer -> String
-strFromAnswer answer = "accepted"
