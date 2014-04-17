@@ -7,15 +7,30 @@ import Control.Monad.Identity
 import Control.Monad.Error
 import Control.Monad.Trans
 
+import System.IO
 
-main = runErrorT interaction
+
+main = do
+	hSetBuffering stdout LineBuffering
+	hSetBuffering stdin LineBuffering
+	interaction
 	
 	
-interaction :: ErrorT String IO String
+interaction :: IO ()
 interaction = do
-	content <- lift getContents
-	answers <- mapM answerFromInput $ lines $ content
-	return $ unlines answers
+	requests <- liftM lines $ getContents
+
+	let stringAnswers = map stringAnswersFromInput requests
+
+	putStrLn $ unlines $ stringAnswers
+
+stringAnswersFromInput ::  String -> String
+stringAnswersFromInput str = handleError $ runIdentity $ runErrorT $ answerFromInput str 
+
+handleError :: Either String String -> String 
+handleError answerOrErr = case answerOrErr of
+		Right str -> str
+		Left error -> "error " ++ error
 
 answerFromInput :: Monad m => String -> ErrorT String m String
 answerFromInput str =
@@ -24,8 +39,9 @@ answerFromInput str =
 reqFromStr :: Monad m => String -> ErrorT String m Request
 reqFromStr = parseRequest
 
-answerFromReq :: Monad m => Request -> ErrorT (String) m Answer
+answerFromReq :: Monad m => Request -> ErrorT String m Answer
 answerFromReq req = do
-	throwError $ strMsg $ "not yet implemented"
+	return Answer
 
-strFromAnswer answer = ""
+strFromAnswer :: Answer -> String
+strFromAnswer answer = "accepted"
