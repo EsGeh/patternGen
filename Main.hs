@@ -1,5 +1,7 @@
 module Main where
 
+import Protocol
+
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Error
@@ -19,16 +21,11 @@ answerFromInput :: Monad m => String -> ErrorT String m String
 answerFromInput str =
 	reqFromStr str >>= answerFromReq >>= return . strFromAnswer
 
+reqFromStr :: Monad m => String -> ErrorT String m Request
+reqFromStr = parseRequest
 
 answerFromReq :: Monad m => Request -> ErrorT (String) m Answer
 answerFromReq req = do
 	throwError $ strMsg $ "not yet implemented"
 
-reqFromStr :: Monad m => String -> ErrorT (String) m Request
-reqFromStr str = do
-	throwError $ strMsg $ "not yet implemented"
-
 strFromAnswer answer = ""
-
-data Request = Request
-data Answer = Answer
