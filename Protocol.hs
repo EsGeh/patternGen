@@ -10,7 +10,7 @@ import Control.Monad.Error
 parseRequest :: Monad m => String -> ErrorT String m Request
 parseRequest = execParser requestParser
 
-execParser :: Monad m => GenParser Char () res-> String -> ErrorT String m res
+execParser :: Monad m => GenParser Char () res -> String -> ErrorT String m res
 execParser parser str = do
 	let eitherRequest = parse parser "request" str
 	case eitherRequest of
@@ -20,17 +20,21 @@ execParser parser str = do
 
 requestParser :: GenParser Char () Request
 requestParser = do
-	ret <- (try getParser <|> setParser)
+	--ret <- option (try getParser) setParser
+	let getParser' = parsecMap Left $ getParser
+	let setParser' = parsecMap Right $ setParser
+	ret <- getParser' <|> setParser'
 	eof
 	return ret
 
+-- get <varname>
 getParser = do
 	string "get" 
 	sepParser
 	varName <- varNameParser 
 	return $ Get varName
 
---testParser :: GenParser Char () ()
+-- set <varname> <value>
 setParser = do
 	string "set"
 	sepParser
@@ -58,13 +62,19 @@ sepParser = do
 	space
 	try spaces
 
+type Request = Either Get Set
 
+data Set = Set Param Value
+	deriving( Read, Show )
+data Get = Get Param
+	deriving( Read, Show )
 
+{-
 data Request =
 	Set Param Value |
 	Get Param
-	deriving( Read, Show )
-data Answer = Answer
+	deriving( Read, Show )-}
+data Answer = Answer Value
 	deriving( Read, Show )
 
 data Value = FloatVal Float | StringVal String

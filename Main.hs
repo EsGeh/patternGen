@@ -6,44 +6,68 @@ import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Error
 import Control.Monad.Trans
+import Control.Monad.Trans.Maybe
+import Control.Monad.State
 
 import System.IO
-
 
 main = do
 	hSetBuffering stdout LineBuffering
 	hSetBuffering stdin LineBuffering
 	interaction
-	
-	
+
+
 interaction :: IO ()
 interaction = do
 	requests <- liftM lines $ getContents
 
-	let stringAnswers = map (handleError . runIdentity . runErrorT . answerFromInput) requests
+	-- stringAnswers :: String -> String
+	let stringAnswers = map (
+		handleError			-- Either ErrMsg String -> String
+		. runIdentity . runErrorT	
+		. answerFromInput		-- String -> ErrT m String
+		) requests
 
 	putStrLn $ unlines $ stringAnswers
 
-handleError :: Either String String -> String 
+handleError :: Either ErrMsg String -> String 
 handleError answerOrErr = case answerOrErr of
 		Right str -> str
-		Left error -> "error " ++ error
+		Left error -> "error"
 
-answerFromInput :: Monad m => String -> ErrorT String m String
+answerFromInput :: Monad m => String -> ErrT m String
 answerFromInput str =
-	reqFromStr str >>= answerFromReq >>= return . strFromAnswer
+	runMaybeT (
+		(lift $ reqFromStr str) >>= answerFromReq -- :: MaybeT (ErrT m) Answer
+	)
+	>>= strFromAnswer -- :: Maybe Answer -> ErrT m String
 
 
 -- code relevant for the protocol
 
-reqFromStr :: Monad m => String -> ErrorT String m Request
+reqFromStr :: Monad m => String -> ErrT m Request
 reqFromStr = parseRequest
 
-strFromAnswer :: Answer -> String
-strFromAnswer answer = "accepted"
+strFromAnswer :: Monad m => Maybe Answer -> ErrT m String
+strFromAnswer maybeAnswer = return $ case maybeAnswer of
+	Just answer -> show answer
+	Nothing -> "void"
 
 -- the real pattern generator...:
 
-answerFromReq :: Monad m => Request -> ErrorT String m Answer
-answerFromReq req = do
-	return Answer
+answerFromReq :: Monad m => Request -> MaybeT (ErrT m) Answer
+answerFromReq req = case req of
+	Left (Get var) -> return $ Answer $ StringVal $ "got " ++ show (Get var)
+	Right (Set var value) -> MaybeT $ return $ Nothing
+
+
+type ErrT m = ErrorT ErrMsg m
+type ErrMsg = String
+
+setVal :: Set -> State genState ()
+setVal req = do
+	return ()	
+
+getVal :: Get -> State genState Value
+getVal req = do
+	return $ StringVal "<return value>"
