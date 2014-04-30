@@ -1,13 +1,15 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import Protocol
+import PatternGen
 
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Error
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
-import Control.Monad.State
+import Control.Monad.Trans.State
 
 import System.IO
 
@@ -22,52 +24,46 @@ interaction = do
 	requests <- liftM lines $ getContents
 
 	-- stringAnswers :: String -> String
-	let stringAnswers = map (
-		handleError			-- Either ErrMsg String -> String
-		. runIdentity . runErrorT	
-		. answerFromInput		-- String -> ErrT m String
-		) requests
+	let actions = map actionFromReq requests
+	(evalStateT $ sequence_ actions) initState
 
-	putStrLn $ unlines $ stringAnswers
+actionFromReq :: String -> (GenStateT IO) ()
+actionFromReq str =
+	StateT $ \s -> do
+	(res, s') <- (runStateT $ (answerFromString str :: GenStateT IO ((MaybeT (ErrT Identity)) Answer))) s
+	
+	case runIdentity (runErrorT (runMaybeT res)) of
+		Left error -> putStrLn error
+		Right Nothing -> return ()
+		Right (Just answer) -> putStrLn $ show answer
+	
+	return $ ((), s')
 
-handleError :: Either ErrMsg String -> String 
-handleError answerOrErr = case answerOrErr of
-		Right str -> str
-		Left error -> "error"
+answerFromString :: forall mS . (Monad mS)=> String -> GenStateT mS (MaybeT (ErrT Identity) Answer)
+answerFromString str = 
+	(return $ lift $ reqFromStr str)
+	>>=
+	answerFromReq' -- :: GenStateT mS (MaybeT (ErrT m) Answer)
 
-answerFromInput :: Monad m => String -> ErrT m String
-answerFromInput str =
-	runMaybeT (
-		(lift $ reqFromStr str) >>= answerFromReq -- :: MaybeT (ErrT m) Answer
-	)
-	>>= strFromAnswer -- :: Maybe Answer -> ErrT m String
 
+answerFromReq' :: forall mS . (Monad mS) => MaybeT (ErrT Identity) Request -> StateT GeneratorState mS (MaybeT (ErrT Identity) Answer) 
+answerFromReq' maybeReq =
+	case (runIdentity $ runErrorT $ runMaybeT maybeReq) of
+		Right (Just req) -> (return $ req) >>= answerFromReq
+		Right (Nothing) -> state $ \s -> (ans, s)
+			where
+				ans = MaybeT $ return Nothing
+		Left error -> state $ \s -> (ans, s)
+			where
+				ans = lift $ ErrorT $ return $ Left error
+	
+
+--answerFromReq :: forall m mS. (Monad m, Monad mS) => Request -> StateT GeneratorState mS (MaybeT (ErrT m) Answer) --GenStateT (MaybeT (ErrT m)) Answer
 
 -- code relevant for the protocol
 
+strFromAnswer :: Answer -> String
+strFromAnswer answer = show answer
+
 reqFromStr :: Monad m => String -> ErrT m Request
 reqFromStr = parseRequest
-
-strFromAnswer :: Monad m => Maybe Answer -> ErrT m String
-strFromAnswer maybeAnswer = return $ case maybeAnswer of
-	Just answer -> show answer
-	Nothing -> "void"
-
--- the real pattern generator...:
-
-answerFromReq :: Monad m => Request -> MaybeT (ErrT m) Answer
-answerFromReq req = case req of
-	Left (Get var) -> return $ Answer $ StringVal $ "got " ++ show (Get var)
-	Right (Set var value) -> MaybeT $ return $ Nothing
-
-
-type ErrT m = ErrorT ErrMsg m
-type ErrMsg = String
-
-setVal :: Set -> State genState ()
-setVal req = do
-	return ()	
-
-getVal :: Get -> State genState Value
-getVal req = do
-	return $ StringVal "<return value>"
