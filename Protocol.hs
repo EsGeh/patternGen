@@ -77,7 +77,17 @@ data Request =
 data Answer = Answer Value
 	deriving( Read, Show )
 
-data Value = FloatVal Float | StringVal String
+{-
+type Value = 
+
+data FloatVal = FloatVal { fromFloatVal :: Float }
+	deriving( Read, Show )
+data StringVal = StringVal { fromStringVal :: String }
+	deriving( Read, Show )
+-}
+data Value =
+	FloatVal Float
+	| StringVal String
 	deriving( Read, Show )
 type Param = String
 
