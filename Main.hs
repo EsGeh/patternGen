@@ -23,21 +23,22 @@ interaction :: IO ()
 interaction = do
 	requests <- liftM lines $ getContents
 
-	-- stringAnswers :: String -> String
 	let actions = map actionFromReq requests
 	(evalStateT $ sequence_ actions) initState
 
 actionFromReq :: String -> (GenStateT IO) ()
 actionFromReq str =
-	StateT $ \s -> do
-	(res, s') <- (runStateT $ (answerFromString str :: GenStateT IO ((MaybeT (ErrT Identity)) Answer))) s
-	
-	case runIdentity (runErrorT (runMaybeT res)) of
-		Left error -> putStrLn error
-		Right Nothing -> return ()
-		Right (Just answer) -> putStrLn $ show answer
-	
-	return $ ((), s')
+	StateT $ \s -> do -- IO
+		let answerFromStr_State = answerFromString str :: GenStateT IO ((MaybeT (ErrT Identity)) Answer)
+
+		(res, s') <- (runStateT $ answerFromStr_State) s
+		
+		case (runIdentity $ runErrorT $ runMaybeT res) of
+			Left error -> putStrLn error
+			Right Nothing -> return ()
+			Right (Just answer) -> putStrLn $ show answer
+		
+		return $ ((), s')
 
 answerFromString :: forall mS . (Monad mS)=> String -> GenStateT mS (MaybeT (ErrT Identity) Answer)
 answerFromString str = 
