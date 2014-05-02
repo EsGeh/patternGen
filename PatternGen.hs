@@ -86,19 +86,25 @@ testSetVal2 = runIdentity $ (runStateT $ setVal (Set "asdf" (StringVal "asdf")))
 -}
 
 setVal :: Monad m => Set -> GenState ((ErrT m) ())
-setVal (Set varName value) = state $ \params ->
+setVal (Set varName value) = do
+	params <- get
 	case runIdentity $ runErrorT $ nameToField varName of
 		Right (getter, setter) ->
 			case runIdentity $ runErrorT $ setter value params of
-				Left err -> (throwError err, params)
-				Right newParams -> (return (), newParams)
-		Left err -> (throwError err, params)
+				Left err ->
+					return $ throwError err
+				Right newParams ->
+					liftM (return) $ put newParams
+		Left err ->
+			return $ throwError err
 
 getVal :: Monad m => Get -> GenState ((ErrT m) Value)
-getVal (Get varName) = state $ \params ->
-	case runIdentity $ runErrorT $ nameToField varName of
-		Right (getter, setter) -> (return $ getter params, params)
-		Left err -> (throwError err, params)
+getVal (Get varName) = do
+	params <- get
+	return $ case runIdentity $ runErrorT $ nameToField varName of
+		Right (getter, setter) ->
+			return $ getter params
+		Left err -> throwError err
 
 
 nameToField :: Monad m => String -> ErrT m (GetPatternParams, SetPatternParams)
