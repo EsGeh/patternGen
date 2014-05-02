@@ -24,7 +24,7 @@ interaction = do
 	requests <- liftM lines $ getContents
 
 	let actions = map actionFromReq requests
-	(evalStateT $ sequence_ actions) initState
+	(evalStateT $ sequence_ actions) defaultParams
 
 actionFromReq :: String -> (GenStateT IO) ()
 actionFromReq str =

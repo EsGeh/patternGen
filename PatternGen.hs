@@ -12,8 +12,11 @@ import Control.Monad.Error
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State
 
+
+
 data PatternParams = PatternParams {
-	testVar :: Float
+	floatVar :: Float,
+	strVar :: String
 }
 	deriving( Show, Read )
 
@@ -21,7 +24,6 @@ data Pattern = Pattern
 
 algorithm :: PatternParams -> Pattern
 algorithm = undefined
-
 
 
 --type GeneratorState = M.Map String Value
@@ -32,13 +34,27 @@ type GenState a = GenStateT Identity a
 
 --type ParamFromName = M.Map String (PatternParams -> Maybe 
 
-initState = PatternParams {
-	testVar = 7
+defaultParams = PatternParams {
+	floatVar = 7,
+	strVar = ""
 }
+
+mapNameToField :: M.Map String (GetPatternParams, SetPatternParams)
+mapNameToField = M.fromList
+	[
+		("testVar", (
+			FloatVal . floatVar,
+			setF (\val params -> params{ floatVar = val })
+		)),
+		("strVar", (
+			StringVal . strVar,
+			setStr (\val params -> params{ strVar = val })
+		))
+	]
 
 {-
 testAnswerFromReq :: Monad m => (MaybeT (ErrT m) Answer, GeneratorState)
-testAnswerFromReq = runIdentity $ (runStateT $ answerFromReq (Right $ Set "testVar" (StringVal "asdf"))) initState
+testAnswerFromReq = runIdentity $ (runStateT $ answerFromReq (Right $ Set "testVar" (StringVal "asdf"))) defaultParams
 -}
 
 answerFromReq :: forall m mS. (Monad m, Monad mS) => Request -> GenStateT mS (MaybeT (ErrT m) Answer)
@@ -62,11 +78,11 @@ answerFromReq req = case req of
 
 {-
 testSetVal :: Monad m => ((ErrT m) (), GeneratorState)
-testSetVal = runIdentity $ (runStateT $ setVal (Set "testVar" (StringVal "asdf"))) initState
+testSetVal = runIdentity $ (runStateT $ setVal (Set "testVar" (StringVal "asdf"))) defaultParams
 
 
 testSetVal2 :: Monad m => ((ErrT m) (), GeneratorState)
-testSetVal2 = runIdentity $ (runStateT $ setVal (Set "asdf" (StringVal "asdf"))) initState
+testSetVal2 = runIdentity $ (runStateT $ setVal (Set "asdf" (StringVal "asdf"))) defaultParams
 -}
 
 setVal :: Monad m => Set -> GenState ((ErrT m) ())
@@ -95,31 +111,16 @@ setF :: (Float -> PatternParams -> PatternParams) -> (Value -> PatternParams -> 
 setF f val params = case val of
 	FloatVal float -> return $ f float params
 	_ -> throwError "expected type 'float'"
-	
 
-mapNameToField :: M.Map String (GetPatternParams, SetPatternParams)
-mapNameToField = M.fromList
-	[
-		("testVar", (
-			FloatVal . testVar,
-			setF (\val params -> params{ testVar = val })
-		)) 
-	]
+setStr :: (String -> PatternParams -> PatternParams) -> (Value -> PatternParams -> ErrT Identity PatternParams)
+setStr f val params = case val of
+	StringVal str -> return $ f str params
+	_ -> throwError "expected type 'string'"
+	
 
 type GetPatternParams = PatternParams -> Value
 type SetPatternParams = Value -> PatternParams -> ErrT Identity PatternParams
 		
-
-{-
-getVal :: Monad m => Get -> GenState ((ErrT m) Value)
-getVal (Get varName) = state $ \map ->
-	let 
-		maybeValue = M.lookup varName map
-	in
-		case maybeValue of
-			Nothing -> (throwError "variable lookup failed", map)
-			Just val -> (return val, map)
--}
 
 type ErrT m = ErrorT ErrMsg m
 type ErrMsg = String
