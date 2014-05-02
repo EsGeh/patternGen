@@ -61,6 +61,10 @@ answerFromReq req = case req of
 testSetVal :: Monad m => ((ErrT m) (), GeneratorState)
 testSetVal = runIdentity $ (runStateT $ setVal (Set "testVar" (StringVal "asdf"))) initState
 
+
+testSetVal2 :: Monad m => ((ErrT m) (), GeneratorState)
+testSetVal2 = runIdentity $ (runStateT $ setVal (Set "asdf" (StringVal "asdf"))) initState
+
 setVal :: Monad m => Set -> GenState ((ErrT m) ())
 setVal (Set varName value) = state $ \params ->
 	case runIdentity $ runErrorT $ nameToField varName of
