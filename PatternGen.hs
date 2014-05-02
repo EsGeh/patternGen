@@ -36,8 +36,10 @@ initState = PatternParams {
 	testVar = 7
 }
 
+{-
 testAnswerFromReq :: Monad m => (MaybeT (ErrT m) Answer, GeneratorState)
 testAnswerFromReq = runIdentity $ (runStateT $ answerFromReq (Right $ Set "testVar" (StringVal "asdf"))) initState
+-}
 
 answerFromReq :: forall m mS. (Monad m, Monad mS) => Request -> GenStateT mS (MaybeT (ErrT m) Answer)
 answerFromReq req = case req of
@@ -51,19 +53,21 @@ answerFromReq req = case req of
 			ret,			-- (ErrT m) Value
 			s')
 	Right set -> StateT $ \s -> return $
-		let (_, s') = (runState (setVal set) s) :: ((ErrT m) (), GeneratorState)
+		let (ret, s') = (runState (setVal set) s) :: ((ErrT m) (), GeneratorState)
 		in (
-			MaybeT $
-			return $
-			Nothing
+			MaybeT $		-- MaybeT (ErrT m) Answer
+			liftM (const Nothing) $ -- ErrT m (Maybe Answer)
+			ret 			-- ErrT m ()
 			, s')
 
+{-
 testSetVal :: Monad m => ((ErrT m) (), GeneratorState)
 testSetVal = runIdentity $ (runStateT $ setVal (Set "testVar" (StringVal "asdf"))) initState
 
 
 testSetVal2 :: Monad m => ((ErrT m) (), GeneratorState)
 testSetVal2 = runIdentity $ (runStateT $ setVal (Set "asdf" (StringVal "asdf"))) initState
+-}
 
 setVal :: Monad m => Set -> GenState ((ErrT m) ())
 setVal (Set varName value) = state $ \params ->
