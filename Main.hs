@@ -21,10 +21,18 @@ main = do
 
 interaction :: IO ()
 interaction = do
-	requests <- liftM lines $ getContents
+	requests <- liftM ( split . filter (/='\n')) $ getContents
 
 	let actions = map actionFromReq requests
 	(evalStateT $ sequence_ actions) defaultParams
+
+split [] = [[]]
+split xs = start : rest
+	where
+		(start,rem) = span (/=';') xs
+		rest = case rem of
+			[] -> []
+			(';':rem') -> split rem'
 
 actionFromReq :: String -> (GenStateT IO) ()
 actionFromReq str =
@@ -36,7 +44,7 @@ actionFromReq str =
 		case (runIdentity $ runErrorT $ runMaybeT res) of
 			Left error -> putStrLn error
 			Right Nothing -> return ()
-			Right (Just answer) -> putStrLn $ show answer
+			Right (Just answer) -> putStrLn $ strFromAnswer answer
 		
 		return $ ((), s')
 
@@ -64,7 +72,10 @@ answerFromReq' maybeReq =
 -- code relevant for the protocol
 
 strFromAnswer :: Answer -> String
-strFromAnswer answer = show answer
+strFromAnswer (Answer values) = (unwords $ map show' values) ++ ";"
+	where
+		show' (FloatVal f) = show f
+		show' (StringVal f) = show f
 
 reqFromStr :: Monad m => String -> ErrT m Request
 reqFromStr = parseRequest
