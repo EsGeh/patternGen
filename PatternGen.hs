@@ -54,7 +54,8 @@ testAnswerFromReq = runIdentity $ (runStateT $ answerFromReq (Right $ Set "testV
 
 answerFromReq :: forall m mS. (Monad m, Monad mS) => Request -> GenStateT mS (MaybeT (ErrT m) Answer)
 answerFromReq req = case req of
-	Left get -> StateT $ \s -> return $ 
+	Bang -> return $ return $ Answer [StringVal "dummy-pattern-generator return"]
+	GetReq get -> StateT $ \s -> return $ 
 		let
 			(ret, s') = runState (getVal get) s :: ((ErrT m) [Value], GeneratorState)
 		in
@@ -63,7 +64,7 @@ answerFromReq req = case req of
 			liftM Answer $		-- (ErrT m) Answer
 			ret,			-- (ErrT m) Value
 			s')
-	Right set -> StateT $ \s -> return $
+	SetReq set -> StateT $ \s -> return $
 		let (ret, s') = (runState (setVal set) s) :: ((ErrT m) (), GeneratorState)
 		in (
 			MaybeT $		-- MaybeT (ErrT m) Answer

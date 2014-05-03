@@ -21,11 +21,16 @@ execParser parser str = do
 requestParser :: GenParser Char () Request
 requestParser = do
 	--ret <- option (try getParser) setParser
-	let getParser' = parsecMap Left $ getParser
-	let setParser' = parsecMap Right $ setParser
-	ret <- getParser' <|> setParser'
+	let getParser' = parsecMap GetReq $ getParser
+	let setParser' = parsecMap SetReq $ setParser
+	ret <- bangParser <|> getParser' <|> setParser'
 	eof
 	return ret
+
+bangParser = do
+	string "bang"
+	return Bang
+	
 
 -- get <varname>
 getParser = do
@@ -66,7 +71,7 @@ sepParser = do
 	space
 	try spaces
 
-type Request = Either Get Set
+data Request = GetReq Get | SetReq Set | Bang
 
 data Set = Set Param [Value]
 	deriving( Read, Show )
