@@ -13,7 +13,6 @@ import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State
 
 
-
 data PatternParams = PatternParams {
 	floatVar :: Float,
 	strVar :: String
@@ -22,17 +21,13 @@ data PatternParams = PatternParams {
 
 data Pattern = Pattern
 
-algorithm :: PatternParams -> Pattern
-algorithm = undefined
-
-
---type GeneratorState = M.Map String Value
 type GeneratorState = PatternParams
 
 type GenStateT m a = StateT GeneratorState m a
 type GenState a = GenStateT Identity a
 
---type ParamFromName = M.Map String (PatternParams -> Maybe 
+algorithm :: PatternParams -> Pattern
+algorithm = undefined
 
 defaultParams = PatternParams {
 	floatVar = 7,
