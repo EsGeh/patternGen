@@ -21,10 +21,18 @@ main = do
 
 interaction :: IO ()
 interaction = do
-	requests <- liftM lines $ getContents
+	requests <- liftM ( split . filter (/='\n')) $ getContents
 
 	let actions = map actionFromReq requests
 	(evalStateT $ sequence_ actions) initState
+
+split [] = [[]]
+split xs = start : rest
+	where
+		(start,rem) = span (/=';') xs
+		rest = case rem of
+			[] -> []
+			(';':rem') -> split rem'
 
 actionFromReq :: String -> (GenStateT IO) ()
 actionFromReq str =
