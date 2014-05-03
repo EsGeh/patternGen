@@ -44,7 +44,7 @@ actionFromReq str =
 		case (runIdentity $ runErrorT $ runMaybeT res) of
 			Left error -> putStrLn error
 			Right Nothing -> return ()
-			Right (Just answer) -> putStrLn $ show answer
+			Right (Just answer) -> putStrLn $ strFromAnswer answer
 		
 		return $ ((), s')
 
@@ -72,7 +72,10 @@ answerFromReq' maybeReq =
 -- code relevant for the protocol
 
 strFromAnswer :: Answer -> String
-strFromAnswer answer = show answer
+strFromAnswer (Answer values) = (unwords $ map show' values) ++ ";"
+	where
+		show' (FloatVal f) = show f
+		show' (StringVal f) = show f
 
 reqFromStr :: Monad m => String -> ErrT m Request
 reqFromStr = parseRequest

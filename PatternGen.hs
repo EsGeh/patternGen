@@ -18,7 +18,7 @@ type GeneratorState = M.Map String [Value]
 type GenStateT m a = StateT GeneratorState m a
 type GenState a = GenStateT Identity a
 
-initState = M.singleton "testVar" [FloatVal 7]
+initState = M.singleton "testVar" [FloatVal 3, FloatVal 7]
 
 {-
 answerTemp :: GeneratorState -> Request -> (Either ErrMsg (Maybe Answer), GeneratorState)
