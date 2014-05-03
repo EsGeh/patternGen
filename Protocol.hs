@@ -34,26 +34,30 @@ getParser = do
 	varName <- varNameParser 
 	return $ Get varName
 
--- set <varname> <value>
+-- set <varname> [<value>]
 setParser = do
 	string "set"
 	sepParser
 	varName <- varNameParser
-	sepParser
-	value <- valueParser
-	return $ Set varName value
+	values <- (try $ do
+		sepParser
+		sepBy valueParser sepParser)
+		<|>
+		(return [])
+	--value <- valueParser
+	return $ Set varName values
 
 valueParser = do
 	try floatParser <|> stringParser
 
 floatParser = do
-	try (string "float") <|> string "f"
-	sepParser
+	--try (string "float") <|> string "f"
+	--sepParser
 	value <- many1 digit
 	return $ FloatVal $ read value
 stringParser = do
-	try (string "symbol") <|> string "s"
-	sepParser
+	--try (string "symbol") <|> string "s"
+	--sepParser
 	str <- many1 $ (letter <|> digit)
 	return $ StringVal $ str
 
@@ -64,7 +68,7 @@ sepParser = do
 
 type Request = Either Get Set
 
-data Set = Set Param Value
+data Set = Set Param [Value]
 	deriving( Read, Show )
 data Get = Get Param
 	deriving( Read, Show )
@@ -74,7 +78,7 @@ data Request =
 	Set Param Value |
 	Get Param
 	deriving( Read, Show )-}
-data Answer = Answer Value
+data Answer = Answer [Value]
 	deriving( Read, Show )
 
 data Value = FloatVal Float | StringVal String

@@ -13,12 +13,12 @@ import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State
 
 
-type GeneratorState = M.Map String Value
+type GeneratorState = M.Map String [Value]
 
 type GenStateT m a = StateT GeneratorState m a
 type GenState a = GenStateT Identity a
 
-initState = M.singleton "testVar" (FloatVal 7)
+initState = M.singleton "testVar" [FloatVal 7]
 
 {-
 answerTemp :: GeneratorState -> Request -> (Either ErrMsg (Maybe Answer), GeneratorState)
@@ -31,7 +31,7 @@ answerFromReq :: forall m mS. (Monad m, Monad mS) => Request -> GenStateT mS (Ma
 answerFromReq req = case req of
 	Left get -> StateT $ \s -> return $ 
 		let
-			(ret, s') = runState (getVal get) s :: ((ErrT m) Value, GeneratorState)
+			(ret, s') = runState (getVal get) s :: ((ErrT m) [Value], GeneratorState)
 		in
 			(MaybeT $		-- MaybeT (ErrT m) Answer
 			liftM Just $ 		-- (ErrT m) (Maybe Answer)
@@ -47,10 +47,10 @@ answerFromReq req = case req of
 			, s')
 
 setVal :: Monad m => Set -> GenState ((ErrT m) ())
-setVal (Set varName value) = state $ \oldMap ->
-	(return (), M.insert varName value oldMap)
+setVal (Set varName values) = state $ \oldMap ->
+	(return (), M.insert varName values oldMap)
 
-getVal :: Monad m => Get -> GenState ((ErrT m) Value)
+getVal :: Monad m => Get -> GenState ((ErrT m) [Value])
 getVal (Get varName) = state $ \map ->
 	let 
 		maybeValue = M.lookup varName map
