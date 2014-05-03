@@ -3,7 +3,7 @@ module PatternGen where
 
 import Protocol
 
-import Data.Map as M
+import qualified Data.Map as M
 
 
 import Control.Monad.Identity
@@ -19,7 +19,7 @@ data PatternParams = PatternParams {
 }
 	deriving( Show, Read )
 
-data Pattern = Pattern
+data Pattern = Pattern [Float]
 
 type GeneratorState = PatternParams
 
@@ -27,17 +27,20 @@ type GenStateT m a = StateT GeneratorState m a
 type GenState a = GenStateT Identity a
 
 algorithm :: PatternParams -> Pattern
-algorithm = undefined
+algorithm params = Pattern [floatVar params]
 
 defaultParams = PatternParams {
 	floatVar = 7,
 	strVar = ""
 }
 
+answerFromPattern :: Pattern -> Answer
+answerFromPattern (Pattern values) = Answer $ map FloatVal values
+
 mapNameToField :: M.Map String (GetPatternParams, SetPatternParams)
 mapNameToField = M.fromList
 	[
-		("testVar", (
+		("floatVar", (
 			return . FloatVal . floatVar,
 			setF (\val params -> params{ floatVar = val })
 		)),
@@ -54,7 +57,7 @@ testAnswerFromReq = runIdentity $ (runStateT $ answerFromReq (Right $ Set "testV
 
 answerFromReq :: forall m mS. (Monad m, Monad mS) => Request -> GenStateT mS (MaybeT (ErrT m) Answer)
 answerFromReq req = case req of
-	Bang -> return $ return $ Answer [StringVal "dummy-pattern-generator return"]
+	Bang -> get >>= return . algorithm >>= return . return . answerFromPattern 
 	GetReq get -> StateT $ \s -> return $ 
 		let
 			(ret, s') = runState (getVal get) s :: ((ErrT m) [Value], GeneratorState)
