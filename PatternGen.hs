@@ -38,11 +38,11 @@ mapNameToField :: M.Map String (GetPatternParams, SetPatternParams)
 mapNameToField = M.fromList
 	[
 		("testVar", (
-			FloatVal . floatVar,
+			return . FloatVal . floatVar,
 			setF (\val params -> params{ floatVar = val })
 		)),
 		("strVar", (
-			StringVal . strVar,
+			return . StringVal . strVar,
 			setStr (\val params -> params{ strVar = val })
 		))
 	]
@@ -56,7 +56,7 @@ answerFromReq :: forall m mS. (Monad m, Monad mS) => Request -> GenStateT mS (Ma
 answerFromReq req = case req of
 	Left get -> StateT $ \s -> return $ 
 		let
-			(ret, s') = runState (getVal get) s :: ((ErrT m) Value, GeneratorState)
+			(ret, s') = runState (getVal get) s :: ((ErrT m) [Value], GeneratorState)
 		in
 			(MaybeT $		-- MaybeT (ErrT m) Answer
 			liftM Just $ 		-- (ErrT m) (Maybe Answer)
@@ -81,11 +81,11 @@ testSetVal2 = runIdentity $ (runStateT $ setVal (Set "asdf" (StringVal "asdf")))
 -}
 
 setVal :: Monad m => Set -> GenState ((ErrT m) ())
-setVal (Set varName value) = do
+setVal (Set varName values) = do
 	params <- get
 	case runIdentity $ runErrorT $ nameToField varName of
 		Right (getter, setter) ->
-			case runIdentity $ runErrorT $ setter value params of
+			case runIdentity $ runErrorT $ setter values params of
 				Left err ->
 					return $ throwError err
 				Right newParams ->
@@ -93,7 +93,7 @@ setVal (Set varName value) = do
 		Left err ->
 			return $ throwError err
 
-getVal :: Monad m => Get -> GenState ((ErrT m) Value)
+getVal :: Monad m => Get -> GenState ((ErrT m) [Value])
 getVal (Get varName) = do
 	params <- get
 	return $ case runIdentity $ runErrorT $ nameToField varName of
@@ -108,20 +108,21 @@ nameToField str =
 		Nothing -> throwError "variable lookup failed"
 		Just (getter, setter) -> return (getter, setter)
 
-setF :: (Float -> PatternParams -> PatternParams) -> (Value -> PatternParams -> ErrT Identity PatternParams)
-setF f val params = case val of
-	FloatVal float -> return $ f float params
-	_ -> throwError "expected type 'float'"
+setF :: (Float -> PatternParams -> PatternParams) -> ([Value] -> PatternParams -> ErrT Identity PatternParams)
+setF f values params = case values of
+	[FloatVal float] -> return $ f float params
+	[StringVal _] -> throwError "expected type 'float'"
+	_ -> throwError "expected exactly one element"
 
-setStr :: (String -> PatternParams -> PatternParams) -> (Value -> PatternParams -> ErrT Identity PatternParams)
-setStr f val params = case val of
-	StringVal str -> return $ f str params
-	_ -> throwError "expected type 'string'"
+setStr :: (String -> PatternParams -> PatternParams) -> ([Value] -> PatternParams -> ErrT Identity PatternParams)
+setStr f values params = case values of
+	[StringVal str] -> return $ f str params
+	[FloatVal _] -> throwError "expected type 'string'"
+	_ -> throwError "expected exactly one element"
 	
 
-type GetPatternParams = PatternParams -> Value
-type SetPatternParams = Value -> PatternParams -> ErrT Identity PatternParams
+type GetPatternParams = PatternParams -> [Value]
+type SetPatternParams = [Value] -> PatternParams -> ErrT Identity PatternParams
 		
-
 type ErrT m = ErrorT ErrMsg m
 type ErrMsg = String
